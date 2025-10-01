@@ -1,0 +1,663 @@
+﻿using back.Data;
+using back.Models.DB;
+using back.Models.DTO;
+using back.Service.Interface;
+using Microsoft.EntityFrameworkCore;
+
+namespace back.Service.Implementation;
+
+public class TailingDepositImpl : ITailingDeposit
+{
+    private readonly AppDbContext _context;
+
+    public TailingDepositImpl(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<ApiResponse<int>> AddTailingDeposit(TailingDepositDto depositDto)
+    {
+        var response = new ApiResponse<int>();
+        try
+        {
+            TailingsDeposit deposit = new TailingsDeposit
+            {
+                NombreDeposito = depositDto.NombreDeposito,
+                Ubicacion = depositDto.Ubicacion,
+                FechaCreacion = depositDto.FechaCreacion
+            };
+            
+            await _context.Deposito.AddAsync(deposit);
+            await _context.SaveChangesAsync();
+            
+            response.Result = deposit.DepositoId;
+            response.Message = "Deposito creado exitosamente";
+            response.StatusCode = 201;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al crear el deposito" + e.Message;
+        }
+
+        return response;
+    }
+
+    public async Task<ApiResponse<int>> AddTailingDepositWithLandmarks(TopographicLandmarkDto hitoDto)
+    {
+        var response = new ApiResponse<int>();
+        
+        try
+        {
+            TopographicLandmark hito = new TopographicLandmark
+            {
+                NombreHito = hitoDto.NombreHito,
+                DepositoId = hitoDto.DepositoId
+            };
+            
+            await _context.Hito.AddAsync(hito);
+            await _context.SaveChangesAsync();
+
+            response.Result = hito.HitoId;
+            response.Message = "Hito agregado exitosamente";
+            response.StatusCode = 201;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al agregar el hito" + e.Message;
+        }
+
+        return response;
+    }
+
+    public async Task<ApiResponse<int>> AddMeasurement(TopographicMeasurementsDto measurementsDto) 
+    {
+        var response = new ApiResponse<int>();
+        
+        try
+        {
+            var existeInicial = await _context.Medicion
+                .AnyAsync(m =>
+                    m.HitoId == measurementsDto.HitoId && m.EsBase
+                );
+
+            if (measurementsDto.EsBase)
+            {
+                if (existeInicial)
+                {
+                    response.StatusCode = 400;
+                    response.Message = "Ya existe una medición inicial para este hito.";
+                    return response;
+                }
+            }
+            else
+            {
+                if (!existeInicial)
+                {
+                    response.StatusCode = 400;
+                    response.Message = "Debe registrar primero la medición inicial para este hito.";
+                    return response;
+                }
+            }
+            
+            var baseMeasurement = await _context.Medicion
+                .Where(m => 
+                    m.HitoId == measurementsDto.HitoId && m.EsBase)
+                .Select(m => new
+                {
+                    m.Este,
+                    m.Norte,
+                    m.Elevacion,
+                    m.Fecha
+                })
+                .FirstOrDefaultAsync();
+
+            var lastMeasurement = await _context.Medicion
+                .Where(m => m.HitoId == measurementsDto.HitoId)
+                .OrderByDescending(m => m.Fecha)
+                .Select(m => new
+                {
+                    m.Este,
+                    m.Norte,
+                    m.Elevacion,
+                    m.HorizontalAcmulado,
+                    m.Fecha,
+                    m.TiempoDias
+                })
+                .FirstOrDefaultAsync();
+
+            TopographicMeasurements medida = new TopographicMeasurements
+            {
+                Fecha = measurementsDto.FechaMedicion,
+                Este = measurementsDto.Este,
+                Norte = measurementsDto.Norte,
+                Elevacion = measurementsDto.Elevacion,
+                HitoId = measurementsDto.HitoId,
+                EsBase = measurementsDto.EsBase,
+            };
+
+            if (baseMeasurement != null && !measurementsDto.EsBase)
+            {
+                medida.FrecuenciaMonitoreo = CalculateFrecuenciaMonitoreo(
+                    measurementsDto.FechaMedicion,
+                    lastMeasurement.Fecha
+                );
+                medida.TiempoDias = CalculateTiempoDias(
+                    baseMeasurement.Fecha,
+                    measurementsDto.FechaMedicion
+                );
+                medida.HorizontalAbsoluto = CalculateHorizontalAbsolute(
+                    baseMeasurement.Este, baseMeasurement.Norte,
+                    measurementsDto.Este, measurementsDto.Norte
+                );
+                medida.VerticalAbsoluto = CalculateVerticalAbsolute(
+                    baseMeasurement.Elevacion, measurementsDto.Elevacion
+                );
+                medida.TotalAbsoluto = CalculateTotalAbsolute(
+                    medida.HorizontalAbsoluto,
+                    medida.VerticalAbsoluto
+                );
+                medida.AcimutAbsoluto = CalculateAcimutAbsolute(
+                    baseMeasurement.Este, measurementsDto.Este,
+                    baseMeasurement.Norte, measurementsDto.Norte
+                );
+                medida.BuzamientoAbsoluto = CalculateBuzamientoAbsolute(
+                    medida.HorizontalAbsoluto,
+                    medida.VerticalAbsoluto
+                );
+                medida.HorizontalRelativo = CalculateHorizontalRelative(
+                    lastMeasurement.Este, lastMeasurement.Norte,
+                    measurementsDto.Este, measurementsDto.Norte
+                );
+                medida.VerticalRelativo = CalculateVerticalRelative(
+                    lastMeasurement.Elevacion, measurementsDto.Elevacion
+                );
+                medida.TotalRelativo = CalculateTotalRelative(
+                    medida.HorizontalRelativo,
+                    medida.VerticalRelativo
+                );
+                medida.AcimutRelativo = CalculateAcimutRelative(
+                    lastMeasurement.Este, measurementsDto.Este,
+                    lastMeasurement.Norte, measurementsDto.Norte
+                );
+                medida.BuzamientoRelativo = CalculateBuzamientoRelative(
+                    medida.HorizontalRelativo,
+                    medida.VerticalRelativo
+                );
+                medida.HorizontalAcmulado = CalculateHorizontalAccumulated(
+                    medida.TotalRelativo,
+                    lastMeasurement.HorizontalAcmulado
+                );
+                medida.VelocidadMedia = CalculateVelocidadMedia(
+                    medida.TotalRelativo,
+                    medida.TiempoDias,
+                    lastMeasurement.TiempoDias
+                );
+                medida.InversaVelocidadMedia = CalculateInversaVelocidadMedia(
+                    medida.VelocidadMedia
+                );
+
+            }
+
+            await _context.Medicion.AddAsync(medida);
+            await _context.SaveChangesAsync();
+            
+            response.Result = medida.MedicionId;
+            response.Message = "Medicion agregada exitosamente";
+            response.StatusCode = 201;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al agregar la medicion" + e.Message;
+        }
+        
+        return response;
+    }
+
+    public async Task<ApiResponse> GetAllTailingDeposits()
+    {
+        ApiResponse<List<GetTailingDepositDto>> response = new();
+        
+        try
+        {
+            var deposits = await _context.Deposito
+                .AsNoTracking()
+                .Select(d => new GetTailingDepositDto
+                {
+                    Id = d.DepositoId,
+                    NombreDeposito = d.NombreDeposito,
+                    Ubicacion = d.Ubicacion,
+                    FechaCreacion = d.FechaCreacion
+                })
+                .ToListAsync();
+
+            response.Result = deposits;
+            response.Message = "Depositos obtenidos exitosamente";
+            response.StatusCode = 200;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al obtener los depositos" + e.Message;
+        }
+        return response;
+    }
+
+    public async Task<ApiResponse> GetAllLandmarksWithTailings()
+    {
+        ApiResponse<List<GetLandmarkWithDepositDto>> response = new();
+        
+        try
+        {
+            var hitos = await (
+                from h in _context.Hito.AsNoTracking()
+                join d in _context.Deposito.AsNoTracking()
+                    on h.DepositoId equals d.DepositoId
+                select new GetLandmarkWithDepositDto 
+                {
+                    HitoId = h.HitoId, 
+                    NombreHito = h.NombreHito, 
+                    DepositoId = d.DepositoId, 
+                    NombreDeposito = d.NombreDeposito
+                }).ToListAsync();
+            
+            response.Result = hitos;
+            response.Message = "Hitos obtenidos exitosamente";
+            response.StatusCode = 200;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al obtener los hitos" + e.Message;
+        }
+        
+        return response;
+    }
+
+    public async Task<ApiResponse> GetAllMeasurementsWithLandmark()
+    {
+        ApiResponse<List<GetMeasurementsWithLandmarkDto>> response = new();
+        try
+        {
+            var measurements = (
+                from m in _context.Medicion.AsNoTracking()
+                join h in _context.Hito.AsNoTracking()
+                    on m.HitoId equals h.HitoId
+                select new GetMeasurementsWithLandmarkDto
+                {
+                    MedicionId = m.MedicionId,
+                    Este = m.Este,
+                    Norte = m.Norte,
+                    Elevacion = m.Elevacion,
+                    HorizontalAbsoluto = m.HorizontalAbsoluto,
+                    VerticalAbsoluto = m.VerticalAbsoluto,
+                    TotalAbsoluto = m.TotalAbsoluto,
+                    AcimutAbsoluto = m.AcimutAbsoluto,
+                    BuzamientoAbsoluto = m.BuzamientoAbsoluto,
+                    HorizontalRelativo = m.HorizontalRelativo,
+                    VerticalRelativo = m.VerticalRelativo,
+                    TotalRelativo = m.TotalRelativo,
+                    AcimutRelativo = m.AcimutRelativo,
+                    BuzamientoRelativo = m.BuzamientoRelativo,
+                    HorizontalAcumulado = m.HorizontalAcmulado,
+                    VelocidadMedia = m.VelocidadMedia,
+                    InversaVelocidadMedia = m.InversaVelocidadMedia, //m.VelocidadMedia != 0 ? 1 / m.VelocidadMedia : 0,
+                    FechaMedicion = m.Fecha,
+                    HitoId = h.HitoId,
+                    NombreHito = h.NombreHito
+                }).ToListAsync();
+            
+            response.Result = await measurements;
+            response.Message = "Mediciones obtenidas exitosamente";
+            response.StatusCode = 200;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al obtener las mediciones" + e.Message;
+        }
+        
+        return response;
+    }
+
+    public async Task<ApiResponse> GetMeasurementsByLandmarkId(GetMeasurementsByLandmarkIdDto measurementsByLandmarkIdDto)
+    {
+        ApiResponse<List<GetMeasurementsWithLandmarkDto>> response = new();
+
+        try
+        {
+            var measurements = (
+                from m in _context.Medicion.AsNoTracking()
+                join h in _context.Hito.AsNoTracking()
+                    on m.HitoId equals h.HitoId
+                where m.HitoId == measurementsByLandmarkIdDto.HitoId
+                select new GetMeasurementsWithLandmarkDto
+                {
+                    MedicionId = m.MedicionId,
+                    Este = m.Este,
+                    Norte = m.Norte,
+                    Elevacion = m.Elevacion,
+                    HorizontalAbsoluto = m.HorizontalAbsoluto,
+                    VerticalAbsoluto = m.VerticalAbsoluto,
+                    TotalAbsoluto = m.TotalAbsoluto,
+                    AcimutAbsoluto = m.AcimutAbsoluto,
+                    BuzamientoAbsoluto = m.BuzamientoAbsoluto,
+                    HorizontalRelativo = m.HorizontalRelativo,
+                    VerticalRelativo = m.VerticalRelativo,
+                    TotalRelativo = m.TotalRelativo,
+                    AcimutRelativo = m.AcimutRelativo,
+                    BuzamientoRelativo = m.BuzamientoRelativo,
+                    HorizontalAcumulado = m.HorizontalAcmulado,
+                    VelocidadMedia = m.VelocidadMedia,
+                    InversaVelocidadMedia = m.InversaVelocidadMedia,//m.VelocidadMedia != 0 ? 1 / m.VelocidadMedia : 0,
+                    FechaMedicion = m.Fecha,
+                    HitoId = h.HitoId,
+                    NombreHito = h.NombreHito
+                }).ToListAsync();
+            
+            response.Result = await measurements;
+            response.Message = "Mediciones obtenidas exitosamente";
+            response.StatusCode = 200;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al obtener las mediciones " + e.Message;
+        }
+        return response;
+    }
+
+    public async Task<ApiResponse> GetMeasurementsByLandmarkIds(GetMeasurementsByLandmarkIdsDto getMeasurementsByLandmarkIdsDto)
+    {
+        ApiResponse<List<GetMeasurementsWithLandmarkDto>> response = new();
+
+        try
+        {
+            if (!getMeasurementsByLandmarkIdsDto.HitoIds.Any())
+            {
+                response.StatusCode = 400;
+                response.Message = "No se proporcionaron IDs de hitos.";
+                return response;
+            }
+
+            var measurements = await (
+                from m in _context.Medicion.AsNoTracking()
+                join h in _context.Hito.AsNoTracking()
+                on m.HitoId equals h.HitoId
+                where getMeasurementsByLandmarkIdsDto.HitoIds.Contains(m.HitoId)
+                select new GetMeasurementsWithLandmarkDto
+                {
+                    MedicionId = m.MedicionId,
+                    Este = m.Este,
+                    Norte = m.Norte,
+                    Elevacion = m.Elevacion,
+                    HorizontalAbsoluto = m.HorizontalAbsoluto,
+                    VerticalAbsoluto = m.VerticalAbsoluto,
+                    TotalAbsoluto = m.TotalAbsoluto,
+                    AcimutAbsoluto = m.AcimutAbsoluto,
+                    BuzamientoAbsoluto = m.BuzamientoAbsoluto,
+                    HorizontalRelativo = m.HorizontalRelativo,
+                    VerticalRelativo = m.VerticalRelativo,
+                    TotalRelativo = m.TotalRelativo,
+                    AcimutRelativo = m.AcimutRelativo,
+                    BuzamientoRelativo = m.BuzamientoRelativo,
+                    HorizontalAcumulado = m.HorizontalAcmulado,
+                    VelocidadMedia = m.VelocidadMedia,
+                    InversaVelocidadMedia = m.InversaVelocidadMedia,
+                    FechaMedicion = m.Fecha,
+                    HitoId = h.HitoId,
+                    NombreHito = h.NombreHito
+                }).ToListAsync();
+
+            response.Result = measurements;
+            response.Message = "Mediciones obtenidas exitosamente";
+            response.StatusCode = 200;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al obtener las mediciones " + e.Message;
+        }
+
+        return response;
+    }
+
+    public async Task<ApiResponse> GetMeasurementWithMaxTotalLandmarkId(GetMeasurementsByLandmarkIdDto landmarkId)
+    {
+        ApiResponse<GetMaxMeasurementByLandmarkIdDto> response = new();
+
+        try
+        {
+            bool existsLandmark = await _context.Hito
+                .AsNoTracking()
+                .AnyAsync(h => h.HitoId == landmarkId.HitoId);
+
+            if (!existsLandmark)
+            {
+                response.StatusCode = 400;
+                response.Message = "El hito proporcionado no existe.";
+                return response;
+            }
+            
+            var maxMeasurement = await _context.Medicion
+                .AsNoTracking()
+                .Where(m => m.HitoId == landmarkId.HitoId)
+                .OrderByDescending(m => m.TotalAbsoluto)
+                .Select(m => new GetMaxMeasurementByLandmarkIdDto
+                {
+                    TotalAbsoluto = m.TotalAbsoluto,
+                    AcimutAbsoluto = m.AcimutAbsoluto,
+                    BuzamientoAbsoluto = m.BuzamientoAbsoluto,
+                    VelocidadMedia = m.VelocidadMedia,
+                    FechaMedicion = m.Fecha
+                })
+                .FirstOrDefaultAsync();
+
+            response.Result = maxMeasurement;
+            response.Message = "Medición con mayor total absoluto obtenida exitosamente";
+            response.StatusCode = 200;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al obtener la medicion " + e.Message;
+        }
+
+        return response;
+    }
+
+    private decimal CalculateHorizontalAbsolute(decimal esteBase, decimal norteBase, decimal esteActual, decimal norteActual)
+    {
+        double deltaEste = (double)(esteActual - esteBase);
+        double deltaNorte = (double)(norteActual - norteBase);
+        double distancia = Math.Sqrt(Math.Pow(deltaNorte, 2) + Math.Pow(deltaEste, 2));
+        return 100 * (decimal)distancia;
+    }
+    
+    private decimal CalculateVerticalAbsolute(decimal elevacionBase, decimal elevacionActual)
+    {
+        return 100 * (elevacionActual - elevacionBase);
+    }
+    
+    private decimal CalculateTotalAbsolute(decimal horizontal, decimal vertical)
+    {
+        double horizontalD = (double)horizontal;
+        double verticalD = (double)vertical;
+        double total = Math.Sqrt(Math.Pow(horizontalD, 2) + Math.Pow(verticalD, 2));
+        return (decimal)total;
+    }
+
+    private decimal CalculateAcimutAbsolute(decimal esteBase, decimal esteActual, decimal norteBase, decimal norteActual)
+    {
+        decimal DEste = esteActual - esteBase;
+        decimal DNorte = norteActual - norteBase;
+        
+        int cuadranteAbs = 0;
+        if (DNorte == 0 && DEste == 0)
+            cuadranteAbs = 0;
+        else if (DNorte == 0 && DEste > 0)
+            cuadranteAbs = 90;
+        else if (DNorte == 0 && DEste < 0)
+            cuadranteAbs = 270;
+        else if (DEste == 0 && DNorte > 0)
+            cuadranteAbs = 0;
+        else if (DEste == 0 && DNorte < 0)
+            cuadranteAbs = 180;
+        else if (DNorte > 0 && DEste > 0)
+            cuadranteAbs = 1;
+        else if (DNorte > 0 && DEste < 0)
+            cuadranteAbs = 2;
+        else if (DNorte < 0 && DEste < 0)
+            cuadranteAbs = 3;
+        else if (DNorte < 0 && DEste > 0)
+            cuadranteAbs = 4;
+        
+        double anguloAtanAbs = 0;
+        if (cuadranteAbs != 0 && DNorte != 0)
+            anguloAtanAbs = (Math.Atan((double)Math.Abs(DEste / DNorte)) * 180) / 3.141592654;
+        
+        decimal acimut = 0;
+        if (cuadranteAbs == 0)
+            acimut = 0;
+        else if (cuadranteAbs == 90)
+            acimut = 90;
+        else if (cuadranteAbs == 180)
+            acimut = 180;
+        else if (cuadranteAbs == 270)
+            acimut = 270;
+        else if (cuadranteAbs == 1)
+            acimut = 0 + (decimal)anguloAtanAbs;
+        else if (cuadranteAbs == 2)
+            acimut = 360 - (decimal)anguloAtanAbs;
+        else if (cuadranteAbs == 3)
+            acimut = 180 + (decimal)anguloAtanAbs;
+        else if (cuadranteAbs == 4)
+            acimut = 180 - (decimal)anguloAtanAbs;
+        return acimut;
+    }
+
+    private decimal CalculateBuzamientoAbsolute(decimal deltaHorizontal, decimal deltaVertical)
+    {
+        if (deltaHorizontal > 0)
+        {
+            double PI = 3.141592654;
+            return (decimal)((180 / PI) * Math.Atan((double)deltaVertical / ((double)deltaHorizontal * -1)));
+        }
+        return 0;
+    }
+    
+    private decimal CalculateHorizontalRelative(decimal esteAnterior, decimal norteAnterior, decimal esteActual, decimal norteActual)
+    {
+        double deltaEste = (double)(esteActual - esteAnterior);
+        double deltaNorte = (double)(norteActual - norteAnterior);
+        double distancia = Math.Sqrt(Math.Pow(deltaNorte, 2) + Math.Pow(deltaEste, 2));
+        return 100 * (decimal)distancia;
+    }
+    
+    private decimal CalculateVerticalRelative(decimal elevacionAnterior, decimal elevacionActual)
+    {
+        return 100 * (elevacionActual - elevacionAnterior);
+    }
+    
+    private decimal CalculateTotalRelative(decimal horizontal, decimal vertical)
+    {
+        double horizontalD = (double)horizontal;
+        double verticalD = (double)vertical;
+        double total = Math.Sqrt(Math.Pow(horizontalD, 2) + Math.Pow(verticalD, 2));
+        return (decimal)total;
+    }
+    
+    private decimal CalculateAcimutRelative(decimal esteAnterior, decimal esteActual, decimal norteAnterior, decimal norteActual)
+    {
+        decimal dEste = esteActual - esteAnterior;
+        decimal dNorte = norteActual - norteAnterior;
+        
+        int cuadranteRel = 0;
+        if (dNorte == 0 && dEste == 0)
+            cuadranteRel = 0;
+        else if (dNorte == 0 && dEste > 0)
+            cuadranteRel = 90;
+        else if (dNorte == 0 && dEste < 0)
+            cuadranteRel = 270;
+        else if (dEste == 0 && dNorte > 0)
+            cuadranteRel = 0;
+        else if (dEste == 0 && dNorte < 0)
+            cuadranteRel = 180;
+        else if (dNorte > 0 && dEste > 0)
+            cuadranteRel = 1;
+        else if (dNorte > 0 && dEste < 0)
+            cuadranteRel = 2;
+        else if (dNorte < 0 && dEste < 0)
+            cuadranteRel = 3;
+        else if (dNorte < 0 && dEste > 0)
+            cuadranteRel = 4;
+        
+        double anguloAtanRel = 0;
+        if (cuadranteRel != 0 && dNorte != 0)
+            anguloAtanRel = (Math.Atan((double)Math.Abs(dEste / dNorte)) * 180) / 3.141592654;
+        
+        decimal acimut = 0;
+        if (cuadranteRel == 0)
+            acimut = 0;
+        else if (cuadranteRel == 90)
+            acimut = 90;
+        else if (cuadranteRel == 180)
+            acimut = 180;
+        else if (cuadranteRel == 270)
+            acimut = 270;
+        else if (cuadranteRel == 1)
+            acimut = 0 + (decimal)anguloAtanRel;
+        else if (cuadranteRel == 2)
+            acimut = 360 - (decimal)anguloAtanRel;
+        else if (cuadranteRel == 3)
+            acimut = 180 + (decimal)anguloAtanRel;
+        else if (cuadranteRel == 4)
+            acimut = 180 - (decimal)anguloAtanRel;
+        return acimut;
+    }
+    
+    private decimal CalculateBuzamientoRelative(decimal deltaHorizontal, decimal deltaVertical)
+    {
+        if (deltaHorizontal > 0)
+        {
+            double pi = 3.141592654;
+            return (decimal)((180 / pi) * Math.Atan((double)deltaVertical / ((double)deltaHorizontal * -1)));
+        }
+        return 0;
+    }
+    
+    private decimal CalculateHorizontalAccumulated(decimal totalRelativo, decimal horizontalAcumuladoAnterior)
+    {
+        return totalRelativo + horizontalAcumuladoAnterior;
+    }
+    
+    private int CalculateFrecuenciaMonitoreo(DateOnly fechaActual, DateOnly fechaAnterior)
+    {
+        TimeSpan diferencia = fechaActual.ToDateTime(new TimeOnly()) - fechaAnterior.ToDateTime(new TimeOnly());
+        return (int)diferencia.TotalDays;
+    }
+    
+    private int CalculateTiempoDias(DateOnly fechaBase, DateOnly fechaActual)
+    {
+        TimeSpan diferencia = fechaActual.ToDateTime(new TimeOnly()) - fechaBase.ToDateTime(new TimeOnly());
+        return (int)diferencia.TotalDays;
+    }
+
+    private decimal CalculateVelocidadMedia(decimal totalRelativo, int tiempoDiasActual, int tiempoDiasAnterior)
+    {
+        if (totalRelativo == 0 || (tiempoDiasActual - tiempoDiasAnterior) == 0)
+            return 0;
+        
+        return totalRelativo / (tiempoDiasActual - tiempoDiasAnterior);
+    }
+
+    private decimal CalculateInversaVelocidadMedia(decimal velocidadMedia)
+    {
+        if (velocidadMedia == 0)
+            return 0;
+        return 1 / velocidadMedia;
+    }
+
+}
