@@ -12,8 +12,12 @@ public interface ITailingDeposit
     //GET
     Task<ApiResponse> GetAllTailingDeposits();
     Task<ApiResponse> GetAllLandmarksWithTailings();
+    Task<ApiResponse> GetAllLandmarksWithCoordinates();
     Task<ApiResponse> GetAllMeasurementsWithLandmark();
     Task<ApiResponse> GetMeasurementsByLandmarkId(GetMeasurementsByLandmarkIdDto landmarkIdDto);
     Task<ApiResponse> GetMeasurementsByLandmarkIds(GetMeasurementsByLandmarkIdsDto getMeasurementsByLandmarkIdsDto);
     Task<ApiResponse> GetMeasurementWithMaxTotalLandmarkId(GetMeasurementsByLandmarkIdDto landmarkId);
+    
+    //PUT
+    Task<ApiResponse> EditMeasurementAndRecalculate(int medicionId, TopographicMeasurementsDto measurementsDto);
 }

@@ -25,7 +25,10 @@ namespace back.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Ubicacion = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Fecha_creacion = table.Column<DateOnly>(type: "date", nullable: false)
+                    Fecha_creacion = table.Column<DateOnly>(type: "date", nullable: false),
+                    ZonaUtm = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    CoordenadaEste = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    CoordenadaNorte = table.Column<decimal>(type: "decimal(65,30)", nullable: false)
                 },
                 constraints: table =>
                 {

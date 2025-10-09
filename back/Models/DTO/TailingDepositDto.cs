@@ -5,6 +5,9 @@ public class TailingDepositDto
     public string NombreDeposito { get; set; }
     public string Ubicacion { get; set; }
     public DateOnly FechaCreacion { get; set; }
+    public decimal ZonaUtm { get; set; }
+    public decimal CoordenadaEste { get; set; }
+    public decimal CoordenadaNorte { get; set; }
 }
 
 public class TopographicLandmarkDto
@@ -29,6 +32,9 @@ public class GetTailingDepositDto
     public string NombreDeposito { get; set; }
     public string Ubicacion { get; set; }
     public DateOnly FechaCreacion { get; set; }
+    public decimal ZonaUtm { get; set; }
+    public decimal CoordenadaEste { get; set; }
+    public decimal CoordenadaNorte { get; set; }
 }
 
 public class GetLandmarkWithDepositDto
@@ -37,6 +43,13 @@ public class GetLandmarkWithDepositDto
     public string NombreHito { get; set; }
     public int DepositoId { get; set; }
     public string NombreDeposito { get; set; }
+}
+
+public class GetAllLandmarksWithCoordinatesDto : GetLandmarkWithDepositDto
+{
+    public decimal Este { get; set; }
+    public decimal Norte { get; set; }
+    public decimal Elevacion { get; set; }
 }
 
 public class GetMeasurementsWithLandmarkDto

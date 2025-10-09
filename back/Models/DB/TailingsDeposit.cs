@@ -17,6 +17,15 @@ public class TailingsDeposit
     
     [Column("Fecha_creacion")]
     public DateOnly FechaCreacion { get; set; }
-    
+
+    [Column("ZonaUtm")]
+    public decimal ZonaUtm { get; set; }
+
+    [Column("CoordenadaEste", TypeName = "Decimal(10,5)")]
+    public decimal CoordenadaEste { get; set; }
+
+    [Column("CoordenadaNorte", TypeName = "Decimal(10,5)")]
+    public decimal CoordenadaNorte { get; set; }
+
     public virtual ICollection<TopographicLandmark> Hitos { get; set; } = new List<TopographicLandmark>();
 }

@@ -12,7 +12,7 @@ using back.Data;
 namespace back.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250924002101_Initial")]
+    [Migration("20251001194159_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -33,6 +33,14 @@ namespace back.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("DepositoId"));
 
+                    b.Property<decimal>("CoordenadaEste")
+                        .HasColumnType("decimal(65,30)")
+                        .HasColumnName("CoordenadaEste");
+
+                    b.Property<decimal>("CoordenadaNorte")
+                        .HasColumnType("decimal(65,30)")
+                        .HasColumnName("CoordenadaNorte");
+
                     b.Property<DateOnly>("FechaCreacion")
                         .HasColumnType("date")
                         .HasColumnName("Fecha_creacion");
@@ -46,6 +54,10 @@ namespace back.Migrations
                         .IsRequired()
                         .HasColumnType("longtext")
                         .HasColumnName("Ubicacion");
+
+                    b.Property<decimal>("ZonaUtm")
+                        .HasColumnType("decimal(65,30)")
+                        .HasColumnName("ZonaUtm");
 
                     b.HasKey("DepositoId");
 

@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace back.Models.DB;
 
+[Index(nameof(NombreHito), IsUnique = true)]
 public class TopographicLandmark
 {
     [Key]

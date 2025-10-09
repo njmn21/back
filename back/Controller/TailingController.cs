@@ -52,6 +52,13 @@ public class TailingController : ControllerBase
         return StatusCode(response.StatusCode, response);
     }
 
+    [HttpGet("get-all-landmarks-with-coordinates")]
+    public async Task<IActionResult> GetAllLandmarksWithCoordinates()
+    {
+        var response = await _tailingDeposit.GetAllLandmarksWithCoordinates();
+        return StatusCode(response.StatusCode, response);
+    }
+
     [HttpGet("get-all-measurements")]
     public async Task<IActionResult> GetAllMeasurementsWithLandmark()
     {
@@ -79,6 +86,17 @@ public class TailingController : ControllerBase
     {
         var landmarkIdDto = new GetMeasurementsByLandmarkIdDto { HitoId = landmarkId };
         var response = await _tailingDeposit.GetMeasurementWithMaxTotalLandmarkId(landmarkIdDto);
+        return StatusCode(response.StatusCode, response);
+    }
+    
+    //PUT 
+    [HttpPut("edit-measurement/{medicionId}")]
+    public async Task<IActionResult> EditMeasurement(
+        [FromRoute] int medicionId,
+        [FromBody] TopographicMeasurementsDto measurementsDto
+    )
+    {
+        var response = await _tailingDeposit.EditMeasurementAndRecalculate(medicionId, measurementsDto);
         return StatusCode(response.StatusCode, response);
     }
 }

@@ -24,7 +24,10 @@ public class TailingDepositImpl : ITailingDeposit
             {
                 NombreDeposito = depositDto.NombreDeposito,
                 Ubicacion = depositDto.Ubicacion,
-                FechaCreacion = depositDto.FechaCreacion
+                FechaCreacion = depositDto.FechaCreacion,
+                ZonaUtm = depositDto.ZonaUtm,
+                CoordenadaEste = depositDto.CoordenadaEste,
+                CoordenadaNorte = depositDto.CoordenadaNorte
             };
             
             await _context.Deposito.AddAsync(deposit);
@@ -49,6 +52,14 @@ public class TailingDepositImpl : ITailingDeposit
         
         try
         {
+            var existeHito = await _context.Hito.AnyAsync(h => h.NombreHito == hitoDto.NombreHito);
+            if (existeHito)
+            {
+                response.StatusCode = 400;
+                response.Message = "Ya existe un hito con ese nombre.";
+                return response;
+            }
+            
             TopographicLandmark hito = new TopographicLandmark
             {
                 NombreHito = hitoDto.NombreHito,
@@ -87,7 +98,7 @@ public class TailingDepositImpl : ITailingDeposit
                 if (existeInicial)
                 {
                     response.StatusCode = 400;
-                    response.Message = "Ya existe una medición inicial para este hito.";
+                    response.Message = "Ya existe una lectura base para este hito.";
                     return response;
                 }
             }
@@ -96,7 +107,19 @@ public class TailingDepositImpl : ITailingDeposit
                 if (!existeInicial)
                 {
                     response.StatusCode = 400;
-                    response.Message = "Debe registrar primero la medición inicial para este hito.";
+                    response.Message = "Debe registrar primero la lectura base para este hito.";
+                    return response;
+                }
+
+                var lastMeasurement = await _context.Medicion
+                    .Where(m => m.HitoId == measurementsDto.HitoId)
+                    .OrderByDescending(m => m.Fecha)
+                    .FirstOrDefaultAsync();
+
+                if (lastMeasurement != null && measurementsDto.FechaMedicion <= lastMeasurement.Fecha)
+                {
+                    response.StatusCode = 400;
+                    response.Message = "La fecha de la nueva medición debe ser posterior a la última medición registrada.";
                     return response;
                 }
             }
@@ -113,7 +136,7 @@ public class TailingDepositImpl : ITailingDeposit
                 })
                 .FirstOrDefaultAsync();
 
-            var lastMeasurement = await _context.Medicion
+            var lastMeasurementForCalc = await _context.Medicion
                 .Where(m => m.HitoId == measurementsDto.HitoId)
                 .OrderByDescending(m => m.Fecha)
                 .Select(m => new
@@ -141,7 +164,7 @@ public class TailingDepositImpl : ITailingDeposit
             {
                 medida.FrecuenciaMonitoreo = CalculateFrecuenciaMonitoreo(
                     measurementsDto.FechaMedicion,
-                    lastMeasurement.Fecha
+                    lastMeasurementForCalc.Fecha
                 );
                 medida.TiempoDias = CalculateTiempoDias(
                     baseMeasurement.Fecha,
@@ -167,19 +190,19 @@ public class TailingDepositImpl : ITailingDeposit
                     medida.VerticalAbsoluto
                 );
                 medida.HorizontalRelativo = CalculateHorizontalRelative(
-                    lastMeasurement.Este, lastMeasurement.Norte,
+                    lastMeasurementForCalc.Este, lastMeasurementForCalc.Norte,
                     measurementsDto.Este, measurementsDto.Norte
                 );
                 medida.VerticalRelativo = CalculateVerticalRelative(
-                    lastMeasurement.Elevacion, measurementsDto.Elevacion
+                    lastMeasurementForCalc.Elevacion, measurementsDto.Elevacion
                 );
                 medida.TotalRelativo = CalculateTotalRelative(
                     medida.HorizontalRelativo,
                     medida.VerticalRelativo
                 );
                 medida.AcimutRelativo = CalculateAcimutRelative(
-                    lastMeasurement.Este, measurementsDto.Este,
-                    lastMeasurement.Norte, measurementsDto.Norte
+                    lastMeasurementForCalc.Este, measurementsDto.Este,
+                    lastMeasurementForCalc.Norte, measurementsDto.Norte
                 );
                 medida.BuzamientoRelativo = CalculateBuzamientoRelative(
                     medida.HorizontalRelativo,
@@ -187,12 +210,12 @@ public class TailingDepositImpl : ITailingDeposit
                 );
                 medida.HorizontalAcmulado = CalculateHorizontalAccumulated(
                     medida.TotalRelativo,
-                    lastMeasurement.HorizontalAcmulado
+                    lastMeasurementForCalc.HorizontalAcmulado
                 );
                 medida.VelocidadMedia = CalculateVelocidadMedia(
                     medida.TotalRelativo,
                     medida.TiempoDias,
-                    lastMeasurement.TiempoDias
+                    lastMeasurementForCalc.TiempoDias
                 );
                 medida.InversaVelocidadMedia = CalculateInversaVelocidadMedia(
                     medida.VelocidadMedia
@@ -229,7 +252,10 @@ public class TailingDepositImpl : ITailingDeposit
                     Id = d.DepositoId,
                     NombreDeposito = d.NombreDeposito,
                     Ubicacion = d.Ubicacion,
-                    FechaCreacion = d.FechaCreacion
+                    FechaCreacion = d.FechaCreacion,
+                    ZonaUtm = d.ZonaUtm,
+                    CoordenadaEste = d.CoordenadaEste,
+                    CoordenadaNorte = d.CoordenadaNorte
                 })
                 .ToListAsync();
 
@@ -273,6 +299,45 @@ public class TailingDepositImpl : ITailingDeposit
             response.Message = "Error al obtener los hitos" + e.Message;
         }
         
+        return response;
+    }
+
+    public async Task<ApiResponse> GetAllLandmarksWithCoordinates()
+    {
+        ApiResponse<List<GetAllLandmarksWithCoordinatesDto>> response = new();
+
+        try
+        {
+            var result = await (
+                from h in _context.Hito.AsNoTracking()
+                join d in _context.Deposito.AsNoTracking() on h.DepositoId equals d.DepositoId
+                join m in _context.Medicion.AsNoTracking()
+                    .Where(x => 
+                        x.EsBase
+                        ) on h.HitoId equals m.HitoId into medidas
+                from m in medidas.DefaultIfEmpty()
+                select new GetAllLandmarksWithCoordinatesDto
+                {
+                    HitoId = h.HitoId,
+                    NombreHito = h.NombreHito,
+                    DepositoId = d.DepositoId,
+                    NombreDeposito = d.NombreDeposito,
+                    Este = m != null ? m.Este : 0,
+                    Norte = m != null ? m.Norte : 0,
+                    Elevacion = m != null ? m.Elevacion : 0
+                }
+            ).ToListAsync();
+
+            response.Result = result;
+            response.Message = "Hitos obtenidos exitosamente";
+            response.StatusCode = 200;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al obtener los hitos con coordenadas" + e.Message;
+        }
+
         return response;
     }
 
@@ -463,6 +528,92 @@ public class TailingDepositImpl : ITailingDeposit
         {
             response.StatusCode = 500;
             response.Message = "Error al obtener la medicion " + e.Message;
+        }
+
+        return response;
+    }
+
+    public async Task<ApiResponse> EditMeasurementAndRecalculate(int medicionId, TopographicMeasurementsDto measurementsDto)
+    {
+        var response = new ApiResponse<int>();
+
+        try
+        {
+            var medida = await _context.Medicion.FindAsync(medicionId);
+            if (medida == null)
+            {
+                response.StatusCode = 400;
+                response.Message = "La medición proporcionada no existe.";
+                return response;
+            }
+
+            medida.Fecha = measurementsDto.FechaMedicion;
+            medida.Este = measurementsDto.Este;
+            medida.Norte = measurementsDto.Norte;
+            medida.Elevacion = measurementsDto.Elevacion;
+
+            await _context.SaveChangesAsync();
+
+            if (medida.EsBase)
+            {
+                var mediciones = await _context.Medicion
+                    .Where(m => m.HitoId == medida.HitoId)
+                    .ToListAsync();
+
+                if (mediciones.Count == 1)
+                {
+                    response.Result = medida.MedicionId;
+                    response.Message = "Medición inicial editada exitosamente";
+                    response.StatusCode = 200;
+                    return response;
+                }
+            }
+            
+            var medicionesRecalcular = await _context.Medicion
+                .Where(m => m.HitoId == medida.HitoId)
+                .OrderBy(m => m.Fecha)
+                .ToListAsync();
+            
+            var baseMeasurement = medicionesRecalcular.FirstOrDefault(m => m.EsBase);
+
+            TopographicMeasurements? anterior = baseMeasurement;
+            foreach (var m in medicionesRecalcular)
+            {
+                if (m.Fecha < medida.Fecha)
+                {
+                    anterior = m;
+                    continue;
+                }
+
+                m.FrecuenciaMonitoreo = CalculateFrecuenciaMonitoreo(m.Fecha, anterior.Fecha);
+                m.TiempoDias = CalculateTiempoDias(baseMeasurement.Fecha, m.Fecha);
+                m.HorizontalAbsoluto = CalculateHorizontalAbsolute(baseMeasurement.Este, baseMeasurement.Norte, m.Este, m.Norte);
+                m.VerticalAbsoluto = CalculateVerticalAbsolute(baseMeasurement.Elevacion, m.Elevacion);
+                m.TotalAbsoluto = CalculateTotalAbsolute(m.HorizontalAbsoluto, m.VerticalAbsoluto);
+                m.AcimutAbsoluto = CalculateAcimutAbsolute(baseMeasurement.Este, m.Este, baseMeasurement.Norte, m.Norte);
+                m.BuzamientoAbsoluto = CalculateBuzamientoAbsolute(m.HorizontalAbsoluto, m.VerticalAbsoluto);
+                m.HorizontalRelativo = CalculateHorizontalRelative(anterior.Este, anterior.Norte, m.Este, m.Norte);
+                m.VerticalRelativo = CalculateVerticalRelative(anterior.Elevacion, m.Elevacion);
+                m.TotalRelativo = CalculateTotalRelative(m.HorizontalRelativo, m.VerticalRelativo);
+                m.AcimutRelativo = CalculateAcimutRelative(anterior.Este, m.Este, anterior.Norte, m.Norte);
+                m.BuzamientoRelativo = CalculateBuzamientoRelative(m.HorizontalRelativo, m.VerticalRelativo);
+                m.HorizontalAcmulado = CalculateHorizontalAccumulated(m.TotalRelativo, anterior.HorizontalAcmulado);
+                m.VelocidadMedia = CalculateVelocidadMedia(m.TotalRelativo, m.TiempoDias, anterior.TiempoDias);
+                m.InversaVelocidadMedia = CalculateInversaVelocidadMedia(m.VelocidadMedia);
+
+                anterior = m;
+            }
+
+            await _context.SaveChangesAsync();
+
+            response.Result = medida.MedicionId;
+            response.Message = "Medición editada exitosamente";
+            response.StatusCode = 200;
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al editar la medicion" + e.Message;
         }
 
         return response;
