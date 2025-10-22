@@ -22,6 +22,112 @@ namespace back.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("back.Models.DB.Piezometer", b =>
+                {
+                    b.Property<int>("PiezometroId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("PiezometroId"));
+
+                    b.Property<decimal>("CotaActualBocaTubo")
+                        .HasColumnType("Decimal(10,5)")
+                        .HasColumnName("Cota_actual_boca_tubo");
+
+                    b.Property<decimal>("CotaActualTerreno")
+                        .HasColumnType("Decimal(10,5)")
+                        .HasColumnName("Cota_actual_terreno");
+
+                    b.Property<decimal>("CotaFondoPozo")
+                        .HasColumnType("Decimal(10,5)")
+                        .HasColumnName("Cota_fondo_pozo");
+
+                    b.Property<int>("DepositoId")
+                        .HasColumnType("int")
+                        .HasColumnName("DepositoId");
+
+                    b.Property<decimal>("Elevacion")
+                        .HasColumnType("Decimal(15,5)")
+                        .HasColumnName("Elevacion");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("Estado");
+
+                    b.Property<decimal>("Este")
+                        .HasColumnType("Decimal(15,5)")
+                        .HasColumnName("Este");
+
+                    b.Property<DateOnly>("FechaInstalacion")
+                        .HasColumnType("date")
+                        .HasColumnName("Fecha_instalacion");
+
+                    b.Property<string>("NombrePiezometro")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("Nombre_piezometro");
+
+                    b.Property<decimal>("Norte")
+                        .HasColumnType("Decimal(15,5)")
+                        .HasColumnName("Norte");
+
+                    b.Property<decimal>("ProfundidadActualPozo")
+                        .HasColumnType("Decimal(10,5)")
+                        .HasColumnName("Profundidad_actual_pozo");
+
+                    b.Property<decimal>("StickUp")
+                        .HasColumnType("Decimal(10,5)")
+                        .HasColumnName("Stick_up");
+
+                    b.Property<string>("Ubicacion")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("Ubicacion");
+
+                    b.HasKey("PiezometroId");
+
+                    b.HasIndex("DepositoId");
+
+                    b.ToTable("Piezometro");
+                });
+
+            modelBuilder.Entity("back.Models.DB.PiezometerMeasurements", b =>
+                {
+                    b.Property<int>("MedicionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("MedicionId"));
+
+                    b.Property<string>("Comentario")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("Comentario");
+
+                    b.Property<decimal>("CotaNivelPiezometro")
+                        .HasColumnType("Decimal(10,5)")
+                        .HasColumnName("Cota_Nivel_Piezometro");
+
+                    b.Property<DateOnly>("FechaMedicion")
+                        .HasColumnType("date")
+                        .HasColumnName("Fecha_medicion");
+
+                    b.Property<decimal>("LongitudMedicion")
+                        .HasColumnType("Decimal(10,5)")
+                        .HasColumnName("Longitud_medicion");
+
+                    b.Property<int>("PiezometroId")
+                        .HasColumnType("int")
+                        .HasColumnName("PiezometroId");
+
+                    b.HasKey("MedicionId");
+
+                    b.HasIndex("PiezometroId");
+
+                    b.ToTable("MedicionPiezometro");
+                });
+
             modelBuilder.Entity("back.Models.DB.TailingsDeposit", b =>
                 {
                     b.Property<int>("DepositoId")
@@ -53,7 +159,7 @@ namespace back.Migrations
                         .HasColumnName("Ubicacion");
 
                     b.Property<decimal>("ZonaUtm")
-                        .HasColumnType("decimal(65,30)")
+                        .HasColumnType("Decimal(10,5)")
                         .HasColumnName("ZonaUtm");
 
                     b.HasKey("DepositoId");
@@ -72,6 +178,11 @@ namespace back.Migrations
                     b.Property<int>("DepositoId")
                         .HasColumnType("int")
                         .HasColumnName("DepositoId");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("Descripcion");
 
                     b.Property<string>("NombreHito")
                         .IsRequired()
@@ -184,7 +295,65 @@ namespace back.Migrations
 
                     b.HasIndex("HitoId");
 
-                    b.ToTable("Medicion");
+                    b.ToTable("MedicionHito");
+                });
+
+            modelBuilder.Entity("back.Models.DB.User", b =>
+                {
+                    b.Property<int>("IdUser")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdUser"));
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("Email");
+
+                    b.Property<string>("HashPassword")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("HashPassword");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("Name");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("Password");
+
+                    b.HasKey("IdUser");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("User");
+                });
+
+            modelBuilder.Entity("back.Models.DB.Piezometer", b =>
+                {
+                    b.HasOne("back.Models.DB.TailingsDeposit", "Deposito")
+                        .WithMany("Piezometros")
+                        .HasForeignKey("DepositoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Deposito");
+                });
+
+            modelBuilder.Entity("back.Models.DB.PiezometerMeasurements", b =>
+                {
+                    b.HasOne("back.Models.DB.Piezometer", "Piezometro")
+                        .WithMany("Mediciones")
+                        .HasForeignKey("PiezometroId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Piezometro");
                 });
 
             modelBuilder.Entity("back.Models.DB.TopographicLandmark", b =>
@@ -209,9 +378,16 @@ namespace back.Migrations
                     b.Navigation("Hito");
                 });
 
+            modelBuilder.Entity("back.Models.DB.Piezometer", b =>
+                {
+                    b.Navigation("Mediciones");
+                });
+
             modelBuilder.Entity("back.Models.DB.TailingsDeposit", b =>
                 {
                     b.Navigation("Hitos");
+
+                    b.Navigation("Piezometros");
                 });
 
             modelBuilder.Entity("back.Models.DB.TopographicLandmark", b =>

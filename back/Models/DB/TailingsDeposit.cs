@@ -18,7 +18,7 @@ public class TailingsDeposit
     [Column("Fecha_creacion")]
     public DateOnly FechaCreacion { get; set; }
 
-    [Column("ZonaUtm")]
+    [Column("ZonaUtm", TypeName = "Decimal(10,5)")]
     public decimal ZonaUtm { get; set; }
 
     [Column("CoordenadaEste", TypeName = "Decimal(10,5)")]
@@ -28,4 +28,5 @@ public class TailingsDeposit
     public decimal CoordenadaNorte { get; set; }
 
     public virtual ICollection<TopographicLandmark> Hitos { get; set; } = new List<TopographicLandmark>();
+    public virtual ICollection<Piezometer> Piezometros { get; set; } = new List<Piezometer>();
 }

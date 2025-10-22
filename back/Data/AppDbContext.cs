@@ -12,5 +12,10 @@ public class AppDbContext : DbContext
     
     public virtual DbSet<TailingsDeposit> Deposito { get; set; }
     public virtual DbSet<TopographicLandmark> Hito { get; set; }
-    public virtual DbSet<TopographicMeasurements> Medicion { get; set; }
+    public virtual DbSet<TopographicMeasurements> MedicionHito { get; set; }
+    
+    public virtual DbSet<Piezometer> Piezometro { get; set; }
+    public virtual DbSet<PiezometerMeasurements> MedicionPiezometro { get; set; }
+
+    public virtual DbSet<User> User { get; set; }
 }

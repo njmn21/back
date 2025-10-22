@@ -16,6 +16,9 @@ public class TopographicLandmark
     
     [Column("DepositoId")]
     public int DepositoId { get; set; }
+
+    [Column("Descripcion")]
+    public string Descripcion { get; set; }
     
     [ForeignKey("DepositoId")]
     public virtual TailingsDeposit Deposito { get; set; }

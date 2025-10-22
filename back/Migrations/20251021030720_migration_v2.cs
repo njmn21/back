@@ -5,14 +5,14 @@
 namespace back.Migrations
 {
     /// <inheritdoc />
-    public partial class migrationV3 : Migration
+    public partial class migration_v2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<string>(
-                name: "Nombre_hito",
-                table: "Hito",
+                name: "Email",
+                table: "User",
                 type: "varchar(255)",
                 nullable: false,
                 oldClrType: typeof(string),
@@ -21,9 +21,9 @@ namespace back.Migrations
                 .OldAnnotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Hito_Nombre_hito",
-                table: "Hito",
-                column: "Nombre_hito",
+                name: "IX_User_Email",
+                table: "User",
+                column: "Email",
                 unique: true);
         }
 
@@ -31,12 +31,12 @@ namespace back.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
-                name: "IX_Hito_Nombre_hito",
-                table: "Hito");
+                name: "IX_User_Email",
+                table: "User");
 
             migrationBuilder.AlterColumn<string>(
-                name: "Nombre_hito",
-                table: "Hito",
+                name: "Email",
+                table: "User",
                 type: "longtext",
                 nullable: false,
                 oldClrType: typeof(string),
