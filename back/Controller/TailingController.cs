@@ -1,10 +1,13 @@
 ﻿using back.Models.DTO;
 using back.Service.Interface;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace back.Controller;
 
 [ApiController]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 [Route("api/[controller]")]
 public class TailingController : ControllerBase
 {
@@ -30,5 +33,14 @@ public class TailingController : ControllerBase
         var response = await _tailingDeposit.GetAllTailingDeposits();
         return StatusCode(response.StatusCode, response);
     }
-    
+
+    //PUT
+    [HttpPut("update-deposit/{depositoId}")]
+    public async Task<IActionResult> UpdateTailingDeposit(
+        [FromRoute] int depositoId,
+        [FromBody] TailingDepositDto depositDto)
+    {
+        var response = await _tailingDeposit.EditTailingDeposit(depositoId, depositDto);
+        return StatusCode(response.StatusCode, response);
+    }
 }

@@ -15,8 +15,10 @@ namespace back.Service.Interface
         Task<ApiResponse> GetMeasurementsByLandmarkId(GetMeasurementsByLandmarkIdDto landmarkIdDto);
         Task<ApiResponse> GetMeasurementsByLandmarkIds(GetMeasurementsByLandmarkIdsDto getMeasurementsByLandmarkIdsDto);
         Task<ApiResponse> GetMeasurementWithMaxTotalLandmarkId(GetMeasurementsByLandmarkIdDto landmarkId);
+        Task<ApiResponse> GetConvertLandMark();
 
         // PUT
+        Task<ApiResponse> EditLandmarkDeposit(int hitoId, TopographicLandmarkDto landmarkDto);
         Task<ApiResponse> EditMeasurementAndRecalculate(int medicionId, TopographicMeasurementsDto measurementsDto);
     }
 }

@@ -12,4 +12,9 @@ public interface IPiezometer
     Task<ApiResponse> GetAllPiezometers();
     Task<ApiResponse> GetAllMeasurementsPiezometerById(int piezometerId);
     Task<ApiResponse> GetAllMeasurementsPiezometerByIds(GetMeasurementsPiezometersByIds ids);
+    Task<ApiResponse> GetConvertPiezometer();
+
+    // PUT
+    Task<ApiResponse> UpdatePiezometer(int id, PutPiezometerDto piezometerDto);
+    Task<ApiResponse> UpdateMeasurementPiezometer(int id, PutMeasurementPiezometerDto measurementPiezometerDto);
 }

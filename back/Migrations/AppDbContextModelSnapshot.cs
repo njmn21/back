@@ -18,9 +18,9 @@ namespace back.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "8.0.20")
-                .HasAnnotation("Relational:MaxIdentifierLength", 64);
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("back.Models.DB.Piezometer", b =>
                 {
@@ -28,7 +28,7 @@ namespace back.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("PiezometroId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PiezometroId"));
 
                     b.Property<decimal>("CotaActualBocaTubo")
                         .HasColumnType("Decimal(10,5)")
@@ -52,7 +52,7 @@ namespace back.Migrations
 
                     b.Property<string>("Estado")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("Estado");
 
                     b.Property<decimal>("Este")
@@ -65,7 +65,7 @@ namespace back.Migrations
 
                     b.Property<string>("NombrePiezometro")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("Nombre_piezometro");
 
                     b.Property<decimal>("Norte")
@@ -82,7 +82,7 @@ namespace back.Migrations
 
                     b.Property<string>("Ubicacion")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("Ubicacion");
 
                     b.HasKey("PiezometroId");
@@ -98,11 +98,11 @@ namespace back.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("MedicionId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MedicionId"));
 
                     b.Property<string>("Comentario")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("Comentario");
 
                     b.Property<decimal>("CotaNivelPiezometro")
@@ -134,7 +134,7 @@ namespace back.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("DepositoId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DepositoId"));
 
                     b.Property<decimal>("CoordenadaEste")
                         .HasColumnType("Decimal(10,5)")
@@ -150,12 +150,12 @@ namespace back.Migrations
 
                     b.Property<string>("NombreDeposito")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("Nombre_deposito");
 
                     b.Property<string>("Ubicacion")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("Ubicacion");
 
                     b.Property<decimal>("ZonaUtm")
@@ -173,7 +173,7 @@ namespace back.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("HitoId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HitoId"));
 
                     b.Property<int>("DepositoId")
                         .HasColumnType("int")
@@ -181,12 +181,12 @@ namespace back.Migrations
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("Descripcion");
 
                     b.Property<string>("NombreHito")
                         .IsRequired()
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("nvarchar(450)")
                         .HasColumnName("Nombre_hito");
 
                     b.HasKey("HitoId");
@@ -205,7 +205,7 @@ namespace back.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("MedicionId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MedicionId"));
 
                     b.Property<decimal>("AcimutAbsoluto")
                         .HasColumnType("decimal(15,5)")
@@ -228,7 +228,7 @@ namespace back.Migrations
                         .HasColumnName("Elevacion");
 
                     b.Property<bool>("EsBase")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("bit")
                         .HasColumnName("EsBase");
 
                     b.Property<decimal>("Este")
@@ -304,26 +304,26 @@ namespace back.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("IdUser"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdUser"));
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("nvarchar(450)")
                         .HasColumnName("Email");
 
                     b.Property<string>("HashPassword")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("HashPassword");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("Name");
 
                     b.Property<string>("Password")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("nvarchar(max)")
                         .HasColumnName("Password");
 
                     b.HasKey("IdUser");

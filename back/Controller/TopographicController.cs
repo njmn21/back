@@ -1,13 +1,16 @@
 ﻿using back.Models.DB;
 using back.Models.DTO;
 using back.Service.Interface;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace back.Controller;
 
-[Route("api/[controller]")]
 [ApiController]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Route("api/[controller]")]
 public class TopographicController : ControllerBase
 {
     private readonly ITopographicLandmark _topographicLandmark;
@@ -78,7 +81,23 @@ public class TopographicController : ControllerBase
         return StatusCode(response.StatusCode, response);
     }
 
+    [HttpGet("get-converted-landmarks")]
+    public async Task<IActionResult> GetConvertedLandmarks()
+    {
+        var response = await _topographicLandmark.GetConvertLandMark();
+        return StatusCode(response.StatusCode, response);
+    }
+
     //PUT 
+    [HttpPut("update-landmark/{hitoId}")]
+    public async Task<IActionResult> EditHito(
+        [FromRoute] int hitoId,
+        [FromBody] TopographicLandmarkDto landmarkDto)
+    {
+        var response = await _topographicLandmark.EditLandmarkDeposit(hitoId, landmarkDto);
+        return StatusCode(response.StatusCode, response);
+    }
+
     [HttpPut("edit-measurement/{medicionId}")]
     public async Task<IActionResult> EditMeasurement(
         [FromRoute] int medicionId,

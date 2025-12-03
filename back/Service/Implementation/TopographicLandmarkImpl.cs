@@ -2,6 +2,7 @@
 using back.Models.DB;
 using back.Models.DTO;
 using back.Service.Interface;
+using back.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace back.Service.Implementation;
@@ -9,10 +10,17 @@ namespace back.Service.Implementation;
 public class TopographicLandmarkImpl : ITopographicLandmark
 {
     private readonly AppDbContext _context;
+    private readonly ICoordinateConverter _coordinateConverter;
+    private readonly CacheService _cacheService;
 
-    public TopographicLandmarkImpl(AppDbContext context)
+    public TopographicLandmarkImpl(
+        AppDbContext context,
+        ICoordinateConverter coordinateConverter,
+        CacheService cacheService)
     {
         _context = context;
+        _coordinateConverter = coordinateConverter;
+        _cacheService = cacheService;
     }
     public async Task<ApiResponse<int>> AddTailingDepositWithLandmarks(TopographicLandmarkDto hitoDto)
     {
@@ -37,6 +45,10 @@ public class TopographicLandmarkImpl : ITopographicLandmark
 
             await _context.Hito.AddAsync(hito);
             await _context.SaveChangesAsync();
+
+            _cacheService.Remove("hitoConver_cache");
+            _cacheService.Remove("hitosCoordenadas_cache");
+            _cacheService.Remove("allHitos_cache");
 
             response.Result = hito.HitoId;
             response.Message = "Hito agregado exitosamente";
@@ -214,6 +226,14 @@ public class TopographicLandmarkImpl : ITopographicLandmark
 
         try
         {
+            if (_cacheService.TryGet("allHitos_cache", out List<GetLandmarkWithDepositDto> cachedData))
+            {
+                response.Result = cachedData;
+                response.StatusCode = 200;
+                response.Message = "Datos obtenidos desde caché";
+                return response;
+            }
+
             var hitos = await (
                 from h in _context.Hito.AsNoTracking()
                 join d in _context.Deposito.AsNoTracking()
@@ -225,6 +245,8 @@ public class TopographicLandmarkImpl : ITopographicLandmark
                     DepositoId = d.DepositoId,
                     NombreDeposito = d.NombreDeposito
                 }).ToListAsync();
+
+            _cacheService.Set("allHitos_cache", hitos, TimeSpan.FromMinutes(3));
 
             response.Result = hitos;
             response.Message = "Hitos obtenidos exitosamente";
@@ -245,6 +267,14 @@ public class TopographicLandmarkImpl : ITopographicLandmark
 
         try
         {
+            if (_cacheService.TryGet("hitosCoordenadas_cache", out List<GetAllLandmarksWithCoordinatesDto> cachedData))
+            {
+                response.Result = cachedData;
+                response.StatusCode = 200;
+                response.Message = "Datos obtenidos desde caché";
+                return response;
+            }
+
             var result = await (
                 from h in _context.Hito.AsNoTracking()
                 join d in _context.Deposito.AsNoTracking() on h.DepositoId equals d.DepositoId
@@ -265,6 +295,8 @@ public class TopographicLandmarkImpl : ITopographicLandmark
                     Descripcion = h.Descripcion
                 }
             ).ToListAsync();
+
+            _cacheService.Set("hitosCoordenadas_cache", result, TimeSpan.FromMinutes(3));
 
             response.Result = result;
             response.Message = "Hitos obtenidos exitosamente";
@@ -749,4 +781,99 @@ public class TopographicLandmarkImpl : ITopographicLandmark
         return 1 / velocidadMedia;
     }
 
+    public async Task<ApiResponse> GetConvertLandMark()
+    {
+        ApiResponse<List<GetConvertLandmarkDto>> response = new();
+
+        try
+        {
+            if (_cacheService.TryGet("hitoConver_cache", out List<GetConvertLandmarkDto> cachedData))
+            {
+                response.Result = cachedData;
+                response.StatusCode = 200;
+                response.Message = "Datos obtenidos desde caché";
+                return response;
+            }
+
+            var landmarks = await (
+                from mh in _context.MedicionHito.AsNoTracking()
+                join h in _context.Hito.AsNoTracking()
+                    on mh.HitoId equals h.HitoId
+                where mh.EsBase
+                select new
+                {
+                    h.NombreHito,
+                    mh.Este,
+                    mh.Norte
+                }
+            ).ToListAsync();
+
+            var convertedLandmarks = new List<GetConvertLandmarkDto>();
+            foreach (var landmark in landmarks)
+            {
+                var (latitude, longitude) = await _coordinateConverter.ConvertUtmToLatLon(
+                    (double)landmark.Este,
+                    (double)landmark.Norte,
+                    18,
+                    false
+                );
+
+                convertedLandmarks.Add(new GetConvertLandmarkDto
+                {
+                    NombreHito = landmark.NombreHito,
+                    Latitud = latitude,
+                    Longitud = longitude
+                });
+            }
+
+            _cacheService.Set("hitoConver_cache", convertedLandmarks, TimeSpan.FromMinutes(3));
+
+            response.Result = convertedLandmarks;
+            response.StatusCode = 200;
+            response.Message = "Conversión realizada exitosamente";
+        } 
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al realizar la conversión: " + e.Message;
+        }
+
+        return response;
+    }
+
+    public async Task<ApiResponse> EditLandmarkDeposit(int hitoId, TopographicLandmarkDto landmarkDto)
+    {
+        var response = new ApiResponse<int>();
+
+        try
+        {
+            var hito = await _context.Hito.FindAsync(hitoId);
+            if (hito == null)
+            {
+                response.StatusCode = 400;
+                response.Message = "El Hito proporcionado no existe";
+                return response;
+            }
+
+            hito.NombreHito = landmarkDto.NombreHito;
+            hito.DepositoId = landmarkDto.DepositoId;
+            hito.Descripcion = landmarkDto.Descripcion;
+
+            await _context.SaveChangesAsync();
+
+            _cacheService.Remove("allHitos_cache");
+            _cacheService.Remove("hitosCoordenadas_cache");
+
+            response.StatusCode = 200;
+            response.Message = "Hito actualizado exitosamente";
+
+        }
+        catch (Exception e)
+        {
+            response.StatusCode = 500;
+            response.Message = "Error al editar Hito Topográfico";
+        }
+
+        return response;
+    }
 }

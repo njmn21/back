@@ -76,3 +76,10 @@ public class GetMaxMeasurementByLandmarkIdDto
     public decimal VelocidadMedia { get; set; }
     public DateOnly FechaMedicion { get; set; }
 }
+
+public class GetConvertLandmarkDto
+{
+    public string NombreHito { get; set; }
+    public double Latitud { get; set; }
+    public double Longitud { get; set; }
+}

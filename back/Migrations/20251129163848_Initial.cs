@@ -1,5 +1,4 @@
 ﻿using System;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -12,19 +11,14 @@ namespace back.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterDatabase()
-                .Annotation("MySql:CharSet", "utf8mb4");
-
             migrationBuilder.CreateTable(
                 name: "Deposito",
                 columns: table => new
                 {
                     DepositoId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    Nombre_deposito = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Ubicacion = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nombre_deposito = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Ubicacion = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Fecha_creacion = table.Column<DateOnly>(type: "date", nullable: false),
                     ZonaUtm = table.Column<decimal>(type: "Decimal(10,5)", nullable: false),
                     CoordenadaEste = table.Column<decimal>(type: "Decimal(10,5)", nullable: false),
@@ -33,20 +27,33 @@ namespace back.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Deposito", x => x.DepositoId);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "User",
+                columns: table => new
+                {
+                    IdUser = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    HashPassword = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_User", x => x.IdUser);
+                });
 
             migrationBuilder.CreateTable(
                 name: "Hito",
                 columns: table => new
                 {
                     HitoId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    Nombre_hito = table.Column<string>(type: "varchar(255)", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nombre_hito = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     DepositoId = table.Column<int>(type: "int", nullable: false),
-                    Descripcion = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
+                    Descripcion = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -57,29 +64,25 @@ namespace back.Migrations
                         principalTable: "Deposito",
                         principalColumn: "DepositoId",
                         onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+                });
 
             migrationBuilder.CreateTable(
                 name: "Piezometro",
                 columns: table => new
                 {
                     PiezometroId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
-                    Nombre_piezometro = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nombre_piezometro = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Este = table.Column<decimal>(type: "Decimal(15,5)", nullable: false),
                     Norte = table.Column<decimal>(type: "Decimal(15,5)", nullable: false),
                     Elevacion = table.Column<decimal>(type: "Decimal(15,5)", nullable: false),
-                    Ubicacion = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Ubicacion = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Stick_up = table.Column<decimal>(type: "Decimal(10,5)", nullable: false),
                     Cota_actual_boca_tubo = table.Column<decimal>(type: "Decimal(10,5)", nullable: false),
                     Cota_actual_terreno = table.Column<decimal>(type: "Decimal(10,5)", nullable: false),
                     Cota_fondo_pozo = table.Column<decimal>(type: "Decimal(10,5)", nullable: false),
                     Profundidad_actual_pozo = table.Column<decimal>(type: "Decimal(10,5)", nullable: false),
-                    Estado = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Estado = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Fecha_instalacion = table.Column<DateOnly>(type: "date", nullable: false),
                     DepositoId = table.Column<int>(type: "int", nullable: false)
                 },
@@ -92,15 +95,14 @@ namespace back.Migrations
                         principalTable: "Deposito",
                         principalColumn: "DepositoId",
                         onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+                });
 
             migrationBuilder.CreateTable(
                 name: "MedicionHito",
                 columns: table => new
                 {
                     MedicionId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     Este = table.Column<decimal>(type: "decimal(15,5)", nullable: false),
                     Norte = table.Column<decimal>(type: "decimal(15,5)", nullable: false),
                     Elevacion = table.Column<decimal>(type: "decimal(15,5)", nullable: false),
@@ -121,7 +123,7 @@ namespace back.Migrations
                     FrecuenciaMonitoreo = table.Column<int>(type: "int", nullable: false),
                     TiempoDias = table.Column<int>(type: "int", nullable: false),
                     HitoId = table.Column<int>(type: "int", nullable: false),
-                    EsBase = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                    EsBase = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -132,19 +134,17 @@ namespace back.Migrations
                         principalTable: "Hito",
                         principalColumn: "HitoId",
                         onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+                });
 
             migrationBuilder.CreateTable(
                 name: "MedicionPiezometro",
                 columns: table => new
                 {
                     MedicionId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.IdentityColumn),
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     Cota_Nivel_Piezometro = table.Column<decimal>(type: "Decimal(10,5)", nullable: false),
                     Longitud_medicion = table.Column<decimal>(type: "Decimal(10,5)", nullable: false),
-                    Comentario = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Comentario = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Fecha_medicion = table.Column<DateOnly>(type: "date", nullable: false),
                     PiezometroId = table.Column<int>(type: "int", nullable: false)
                 },
@@ -157,8 +157,7 @@ namespace back.Migrations
                         principalTable: "Piezometro",
                         principalColumn: "PiezometroId",
                         onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+                });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Hito_DepositoId",
@@ -185,6 +184,12 @@ namespace back.Migrations
                 name: "IX_Piezometro_DepositoId",
                 table: "Piezometro",
                 column: "DepositoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_User_Email",
+                table: "User",
+                column: "Email",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -195,6 +200,9 @@ namespace back.Migrations
 
             migrationBuilder.DropTable(
                 name: "MedicionPiezometro");
+
+            migrationBuilder.DropTable(
+                name: "User");
 
             migrationBuilder.DropTable(
                 name: "Hito");

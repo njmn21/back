@@ -56,4 +56,30 @@ public class PiezometerController : ControllerBase
         var response = await _piezometer.GetAllMeasurementsPiezometerByIds(ids);
         return StatusCode(response.StatusCode, response);
     }
+
+    [HttpGet("get-converted-piezometers")]
+    public async Task<IActionResult> GetConvertedPiezometers()
+    {
+        var response = await _piezometer.GetConvertPiezometer();
+        return StatusCode(response.StatusCode, response);
+    }
+
+    // PUT
+    [HttpPut("update-piezometer/{piezometerId}")]
+    public async Task<IActionResult> UpdatePiezometer(
+        [FromRoute] int piezometerId,
+        [FromBody] PutPiezometerDto piezometersDto)
+    {
+        var response = await _piezometer.UpdatePiezometer(piezometerId, piezometersDto);
+        return StatusCode(response.StatusCode, response);
+    }
+
+    [HttpPut("update-measurement-piezometer/{measurementId}")]
+    public async Task<IActionResult> UpdateMeasurementPiezometer(
+        [FromRoute] int measurementId,
+        [FromBody] PutMeasurementPiezometerDto putMeasurement)
+    {
+        var response = await _piezometer.UpdateMeasurementPiezometer(measurementId, putMeasurement);
+        return StatusCode(response.StatusCode, response);
+    }
 }

@@ -11,5 +11,5 @@ public interface ITailingDeposit
     Task<ApiResponse> GetAllTailingDeposits();
 
     //PUT
-    
+    Task<ApiResponse> EditTailingDeposit(int id, TailingDepositDto depositDto);
 }
