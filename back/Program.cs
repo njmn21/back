@@ -62,6 +62,7 @@ builder.Services.AddScoped<ITailingDeposit, TailingDepositImpl>();
 builder.Services.AddScoped<ITopographicLandmark, TopographicLandmarkImpl>();
 builder.Services.AddScoped<IPiezometer, PiezometerImpl>();
 builder.Services.AddScoped<ICoordinateConverter, CoordinateConverterImpl>();
+builder.Services.AddScoped<IMap, KeyImpl>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<CacheService>();

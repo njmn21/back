@@ -207,6 +207,10 @@ public class TopographicLandmarkImpl : ITopographicLandmark
             await _context.MedicionHito.AddAsync(medida);
             await _context.SaveChangesAsync();
 
+            _cacheService.Remove("hitoConver_cache");
+            _cacheService.Remove("hitosCoordenadas_cache");
+            _cacheService.Remove("allHitos_cache");
+
             response.Result = medida.MedicionId;
             response.Message = "Medicion agregada exitosamente";
             response.StatusCode = 201;
